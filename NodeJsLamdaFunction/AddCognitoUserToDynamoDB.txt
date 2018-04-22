@@ -1,0 +1,46 @@
+var doc = require('dynamodb-doc');
+
+exports.handler = function(event, context, callback){
+
+if (event.eventType !== 'SyncTrigger') {
+callback(JSON.stringify(event));
+}
+
+if(!(('name' in event.datasetRecords) && ('email' in event.datasetRecords))){
+    
+    callback(JSON.stringify(event));
+}
+var name = event.datasetRecords.name.newValue;
+var email = event.datasetRecords.email.newValue;
+
+var shouldDeleteRecord = (event.datasetRecords.name.op === 'remove') || (event.datasetRecords.email.op === 'remove');
+
+if(shouldDeleteRecord == true)
+{
+    callback(null,event);
+}
+
+var db = new doc.DynamoDB();
+
+var params = {
+    
+    TableName : 'User',
+    Item : {
+        id : 'event.identityId',
+        username :{'S' : 'name'},
+        email_address : {'S' : 'email'}}};
+   
+db.putItem(params,function(err, data){
+    
+    if (err) {
+        console.log('User insert failure', err);
+        callback(err);
+    } else {
+        console.log('User insert success', data);
+        callback(null, event);
+    }
+});
+
+    
+};
+
